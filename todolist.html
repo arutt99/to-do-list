@@ -1,0 +1,603 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Parchment To-Do List</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=EB+Garamond:ital,wght@0,400;0,500;1,400&display=swap" rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body {
+            font-family: 'EB Garamond', serif;
+            background-color: #FBF5E9;
+        }
+        .paper {
+            background-color: #FFFDF6;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1), 0 0 2px rgba(0, 0, 0, 0.05);
+            border-radius: 4px;
+            border: 1px solid #EAE1D1;
+        }
+        h1, .todo-text, .label-text {
+             color: #4a2c2a;
+        }
+        .todo-item {
+            position: relative;
+            transition: background-color 0.3s;
+        }
+        /* Priority Backgrounds */
+        .priority-high { background-color: #ffebee !important; }
+        .priority-medium { background-color: #fff8e1 !important; }
+        .priority-low { background-color: #e3f2fd !important; }
+
+        .todo-item.drag-over {
+            background-color: #f0ebe0 !important; /* Highlight when dragging over */
+        }
+        .checkbox {
+            width: 24px;
+            height: 24px;
+            border: 2px solid #8a7a61;
+            border-radius: 4px;
+            cursor: pointer;
+            flex-shrink: 0;
+            transition: border-color 0.3s ease;
+        }
+        .checkmark__path {
+            stroke-dasharray: 48;
+            stroke-dashoffset: 48;
+            stroke: #4a2c2a;
+            stroke-width: 3;
+            transition: stroke-dashoffset 0.4s cubic-bezier(0.65, 0, 0.45, 1);
+        }
+        .completed .checkmark__path {
+            stroke-dashoffset: 0;
+        }
+        .todo-text {
+            outline: none;
+            position: relative;
+            font-size: 1.25rem;
+            line-height: 1.5;
+            transition: color 0.1s 0.3s;
+        }
+        .main-content::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: #4a2c2a;
+            transform: scaleX(0);
+            transform-origin: left;
+            transition: transform 0.4s cubic-bezier(0.65, 0, 0.45, 1);
+            border-radius: 2px;
+            pointer-events: none;
+        }
+        .completed .main-content::after {
+            transform: scaleX(1);
+        }
+        .completed .todo-text, .completed .item-label {
+            color: transparent !important; /* Use important to override inline styles */
+            background-color: transparent !important;
+            border-color: transparent !important;
+        }
+        .delete-btn {
+            color: #b0a088;
+            font-size: 1.5rem;
+            font-weight: bold;
+            cursor: pointer;
+            padding: 0 0.5rem;
+            opacity: 0;
+            transition: opacity 0.2s, color 0.2s;
+        }
+        .todo-item:hover .delete-btn { opacity: 1; }
+        .delete-btn:hover { color: #c94a4a; }
+
+        .control-btn, .sort-btn {
+            font-family: 'EB Garamond', serif;
+            background-color: #EAE1D1;
+            border: 1px solid #D9CDBA;
+            color: #4a2c2a;
+            padding: 0.5rem 1rem;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: background-color 0.2s, box-shadow 0.2s, color 0.2s;
+        }
+        .control-btn:hover, .sort-btn:hover {
+            background-color: #D9CDBA;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+        }
+        .sort-btn.active {
+            background-color: #4a2c2a;
+            color: #FFFDF6;
+            border-color: #4a2c2a;
+        }
+
+        /* Label Manager & Tag Styles */
+        .label-input {
+            border: 1px solid #D9CDBA;
+            background-color: #FBF5E9;
+            outline-color: #8a7a61;
+        }
+        .draggable-label {
+            border: 1px solid rgba(0,0,0,0.1);
+            cursor: grab;
+            color: white;
+        }
+        .draggable-label:active { cursor: grabbing; }
+        .delete-label-btn {
+             color: rgba(255,255,255,0.7);
+        }
+        .delete-label-btn:hover {
+             color: white;
+        }
+        .item-label {
+            border: 1px solid rgba(0,0,0,0.1);
+            font-size: 0.8rem;
+            color: white;
+            transition: color 0.1s 0.3s, background-color 0.1s 0.3s;
+            position: relative;
+        }
+        .delete-item-label-btn {
+            position: absolute;
+            top: -5px;
+            right: -1px;
+            font-size: 14px;
+            line-height: 1;
+            font-weight: bold;
+            color: rgba(0,0,0,0.4);
+            cursor: pointer;
+            opacity: 0;
+            transition: opacity 0.2s;
+        }
+        .item-label:hover .delete-item-label-btn {
+            opacity: 1;
+        }
+        .color-swatch {
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            cursor: pointer;
+            border: 2px solid transparent;
+            transition: transform 0.2s, border-color 0.2s;
+        }
+        .color-swatch:hover {
+            transform: scale(1.1);
+        }
+        .color-swatch.selected {
+            border-color: #4a2c2a;
+        }
+    </style>
+</head>
+<body class="bg-[#FBF5E9]">
+
+    <div class="flex flex-col xl:flex-row items-start justify-center w-full min-h-screen gap-8 p-4 sm:p-6 md:p-8">
+        
+        <!-- Main To-Do List -->
+        <main class="paper w-full max-w-5xl p-6 sm:p-8">
+            <header class="text-center mb-4">
+                <h1 class="text-4xl sm:text-5xl font-medium tracking-wide">My To-Do List</h1>
+            </header>
+
+            <div class="flex justify-center items-center gap-2 mb-8">
+                <span class="text-lg text-[#4a2c2a]">Sort by:</span>
+                <button id="sort-by-label-btn" class="sort-btn active">Label</button>
+                <button id="sort-by-priority-btn" class="sort-btn">Priority</button>
+            </div>
+            
+            <div id="columns-container" class="flex flex-col md:flex-row gap-x-8">
+                <div id="left-column" class="flex-1 space-y-4 min-h-[50px]"></div>
+                <div id="right-column" class="flex-1 space-y-4 min-h-[50px]"></div>
+            </div>
+    
+            <div class="border-t border-[#EAE1D1] mt-8 pt-6 flex flex-col sm:flex-row items-center justify-end">
+                <button id="new-list-btn" class="control-btn w-full sm:w-auto">Start New List</button>
+            </div>
+        </main>
+    
+        <!-- Label Manager -->
+        <aside class="paper w-full xl:w-80 flex-shrink-0 p-6">
+             <h2 class="text-2xl font-medium text-[#4a2c2a] mb-4 text-center xl:text-left">Priorities</h2>
+            <div id="priority-labels" class="flex flex-wrap justify-center xl:justify-start gap-2 mb-6">
+                <!-- Priority labels will be inserted here -->
+            </div>
+
+            <h2 class="text-2xl font-medium text-[#4a2c2a] mb-4 text-center xl:text-left">Custom Labels</h2>
+            <div class="flex gap-2 mb-4">
+                <input type="text" id="new-label-input" placeholder="New label..." class="label-input rounded-md px-2 py-1 w-full text-lg">
+                <button id="add-label-btn" class="control-btn !px-3">+</button>
+            </div>
+            <div id="color-palette" class="flex flex-wrap justify-center gap-2 mb-4">
+                <!-- Color swatches are added here by JS -->
+            </div>
+            <div id="label-cloud" class="flex flex-wrap gap-2">
+                <!-- Draggable labels will be inserted here -->
+            </div>
+        </aside>
+
+    </div>
+
+    <script>
+        const leftColumn = document.getElementById('left-column');
+        const rightColumn = document.getElementById('right-column');
+        const newListBtn = document.getElementById('new-list-btn');
+        const newLabelInput = document.getElementById('new-label-input');
+        const addLabelBtn = document.getElementById('add-label-btn');
+        const labelCloud = document.getElementById('label-cloud');
+        const colorPalette = document.getElementById('color-palette');
+        const priorityLabelsContainer = document.getElementById('priority-labels');
+        const sortByLabelBtn = document.getElementById('sort-by-label-btn');
+        const sortByPriorityBtn = document.getElementById('sort-by-priority-btn');
+
+        const TODO_STORAGE_KEY = 'persistentTodoList_v5';
+        const LABELS_STORAGE_KEY = 'customTodoLabels_v4';
+        const SORT_MODE_KEY = 'todoListSortMode_v1';
+        const LABEL_COLORS = ['#d32f2f', '#388e3c', '#1976d2', '#f57c00', '#7b1fa2', '#5d4037', '#455a64', '#00796b', '#c2185b', '#0288d1', '#0097a7', '#689f38', '#e64a19', '#616161', '#512da8', '#8d6e63'];
+        const PRIORITIES = {
+            High: { color: '#ef5350', name: 'High' },
+            Medium: { color: '#ffb74d', name: 'Medium' },
+            Low: { color: '#42a5f5', name: 'Low' }
+        };
+
+        let currentSortMode = localStorage.getItem(SORT_MODE_KEY) || 'label';
+
+        // --- CORE TODO FUNCTIONS ---
+        function getTodoContainer() {
+            return document.querySelectorAll('.todo-item').length < 10 ? leftColumn : rightColumn;
+        }
+        
+        function sortAndRedistributeItems() {
+            const allItems = document.querySelectorAll('.todo-item');
+            if (allItems.length <= 1) return;
+
+            const itemData = Array.from(allItems).map(itemEl => {
+                const firstLabelEl = itemEl.querySelector('.item-label:not(.priority-tag)');
+                const priorityLabelEl = itemEl.querySelector('.item-label.priority-tag');
+                return {
+                    element: itemEl,
+                    firstLabelText: firstLabelEl ? firstLabelEl.dataset.text : null,
+                    priorityText: priorityLabelEl ? priorityLabelEl.dataset.text : null
+                };
+            });
+
+            if (currentSortMode === 'label') {
+                const labelOrder = Array.from(labelCloud.querySelectorAll('.label-text')).map(span => span.textContent);
+                itemData.sort((a, b) => {
+                    const indexA = a.firstLabelText ? labelOrder.indexOf(a.firstLabelText) : Infinity;
+                    const indexB = b.firstLabelText ? labelOrder.indexOf(b.firstLabelText) : Infinity;
+                    const finalIndexA = indexA === -1 ? Infinity : indexA;
+                    const finalIndexB = indexB === -1 ? Infinity : indexB;
+                    return finalIndexA - finalIndexB;
+                });
+            } else { // Sort by priority
+                const priorityOrder = { 'High': 0, 'Medium': 1, 'Low': 2 };
+                itemData.sort((a, b) => {
+                    const priorityA = a.priorityText ? priorityOrder[a.priorityText] : Infinity;
+                    const priorityB = b.priorityText ? priorityOrder[b.priorityText] : Infinity;
+                    return priorityA - priorityB;
+                });
+            }
+
+            const fragment = document.createDocumentFragment();
+            itemData.forEach(data => fragment.appendChild(data.element));
+
+            leftColumn.innerHTML = '';
+            rightColumn.innerHTML = '';
+
+            Array.from(fragment.children).forEach((node, index) => {
+                const container = index < 10 ? leftColumn : rightColumn;
+                container.appendChild(node);
+            });
+        }
+
+        function renderItemLabel(labelData, isPriority = false) {
+            const itemLabel = document.createElement('div');
+            itemLabel.className = 'item-label inline-block px-2 py-0.5 rounded-full';
+            itemLabel.textContent = labelData.text;
+            itemLabel.style.backgroundColor = labelData.color;
+            itemLabel.dataset.text = labelData.text;
+            if(isPriority) {
+                itemLabel.classList.add('priority-tag');
+            }
+
+            const deleteTagBtn = document.createElement('span');
+            deleteTagBtn.className = 'delete-item-label-btn';
+            deleteTagBtn.innerHTML = '&times;';
+            itemLabel.appendChild(deleteTagBtn);
+            
+            return itemLabel;
+        }
+
+        function applyPriorityBackground(itemEl, priorityName) {
+            itemEl.classList.remove('priority-high', 'priority-medium', 'priority-low');
+            if (priorityName) {
+                itemEl.classList.add(`priority-${priorityName.toLowerCase()}`);
+            }
+        }
+
+        function createTodoItem({ id = Date.now(), text = '', isCompleted = false, labels = [] } = {}) {
+            const todoItem = document.createElement('div');
+            todoItem.id = `item-${id}`;
+            todoItem.className = 'todo-item flex items-center space-x-4 p-2 rounded-lg';
+            if (isCompleted) todoItem.classList.add('completed');
+
+            const checkbox = document.createElement('div');
+            checkbox.className = 'checkbox flex items-center justify-center';
+            checkbox.innerHTML = `<svg class="checkmark w-full h-full" viewBox="0 0 24 24"><path class="checkmark__path" d="M6 12l4 4 8-8" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
+
+            const mainContent = document.createElement('div');
+            mainContent.className = 'main-content flex-grow relative';
+
+            const todoText = document.createElement('div');
+            todoText.className = 'todo-text w-full';
+            todoText.setAttribute('contenteditable', 'true');
+            todoText.setAttribute('spellcheck', 'false');
+            todoText.textContent = text;
+            mainContent.appendChild(todoText);
+
+            const labelsContainer = document.createElement('div');
+            labelsContainer.className = 'labels-container flex flex-wrap gap-2 mt-1';
+            mainContent.appendChild(labelsContainer);
+
+            let priorityName = null;
+            labels.forEach(labelData => {
+                 const isPriority = Object.values(PRIORITIES).some(p => p.name === labelData.text);
+                 if (isPriority) priorityName = labelData.text;
+                 labelsContainer.appendChild(renderItemLabel(labelData, isPriority));
+            });
+            applyPriorityBackground(todoItem, priorityName);
+
+
+            const deleteBtn = document.createElement('div');
+            deleteBtn.className = 'delete-btn';
+            deleteBtn.innerHTML = '&times;';
+            
+            todoItem.appendChild(checkbox);
+            todoItem.appendChild(mainContent);
+            todoItem.appendChild(deleteBtn);
+
+            todoItem.addEventListener('dragover', e => { e.preventDefault(); todoItem.classList.add('drag-over'); });
+            todoItem.addEventListener('dragleave', () => todoItem.classList.remove('drag-over'));
+            todoItem.addEventListener('drop', e => {
+                e.preventDefault();
+                todoItem.classList.remove('drag-over');
+                try {
+                    const droppedLabelData = JSON.parse(e.dataTransfer.getData('application/json'));
+                    const container = todoItem.querySelector('.labels-container');
+                    
+                    if (droppedLabelData.isPriority) {
+                        // Remove existing priority tags and background
+                        container.querySelectorAll('.priority-tag').forEach(tag => tag.remove());
+                        applyPriorityBackground(todoItem, droppedLabelData.text);
+                    }
+                    
+                    const exists = container.querySelector(`.item-label[data-text="${droppedLabelData.text}"]`);
+                    if (!exists) {
+                        container.appendChild(renderItemLabel(droppedLabelData, droppedLabelData.isPriority));
+                        sortAndRedistributeItems();
+                        saveList();
+                    }
+                } catch (error) { console.error("Failed to parse drop data:", error); }
+            });
+
+            return todoItem;
+        }
+        
+        function saveList() {
+            const items = [];
+            document.querySelectorAll('.todo-item').forEach(itemEl => {
+                const textContent = itemEl.querySelector('.todo-text').textContent.trim();
+                if (document.querySelectorAll('.todo-item').length === 1 && textContent === '') return;
+                
+                const labels = [];
+                itemEl.querySelectorAll('.item-label').forEach(labelEl => {
+                    labels.push({ text: labelEl.dataset.text, color: labelEl.style.backgroundColor });
+                });
+
+                items.push({
+                    id: itemEl.id.replace('item-', ''),
+                    text: itemEl.querySelector('.todo-text').textContent,
+                    isCompleted: itemEl.classList.contains('completed'),
+                    labels: labels
+                });
+            });
+            localStorage.setItem(TODO_STORAGE_KEY, JSON.stringify(items));
+        }
+
+        function loadList() {
+            leftColumn.innerHTML = ''; rightColumn.innerHTML = '';
+            const items = JSON.parse(localStorage.getItem(TODO_STORAGE_KEY)) || [];
+            if (items.length === 0) {
+                leftColumn.appendChild(createTodoItem());
+            } else {
+                items.forEach((itemData, index) => {
+                    (index < 10 ? leftColumn : rightColumn).appendChild(createTodoItem(itemData));
+                });
+            }
+            sortAndRedistributeItems();
+        }
+        
+        // --- LABEL & PRIORITY FUNCTIONS ---
+        function createDraggableLabel({ text, color, isPriority = false, isDeletable = true }) {
+            const labelEl = document.createElement('div');
+            labelEl.className = 'draggable-label flex items-center gap-1 rounded-md px-2 py-1 text-lg';
+            labelEl.setAttribute('draggable', 'true');
+            labelEl.style.backgroundColor = color;
+
+            const labelTextSpan = document.createElement('span');
+            labelTextSpan.className = 'label-text';
+            labelTextSpan.textContent = text;
+            labelEl.appendChild(labelTextSpan);
+
+            if (isDeletable) {
+                const deleteBtn = document.createElement('button');
+                deleteBtn.className = 'delete-label-btn text-xs font-bold';
+                deleteBtn.innerHTML = '&times;';
+                labelEl.appendChild(deleteBtn);
+                deleteBtn.addEventListener('click', () => {
+                    labelEl.remove();
+                    saveLabels();
+                    sortAndRedistributeItems();
+                    saveList();
+                });
+            }
+            
+            labelEl.addEventListener('dragstart', e => {
+                const data = JSON.stringify({ text, color, isPriority });
+                e.dataTransfer.setData('application/json', data);
+            });
+
+            return labelEl;
+        }
+        
+        function saveLabels() {
+            const labels = [];
+            labelCloud.querySelectorAll('.draggable-label').forEach(labelEl => {
+                labels.push({
+                    text: labelEl.querySelector('.label-text').textContent,
+                    color: labelEl.style.backgroundColor
+                });
+            });
+            localStorage.setItem(LABELS_STORAGE_KEY, JSON.stringify(labels));
+        }
+
+        function loadLabels() {
+            labelCloud.innerHTML = '';
+            const labels = JSON.parse(localStorage.getItem(LABELS_STORAGE_KEY)) || [];
+            if (labels.length === 0) { // Default labels
+                 labelCloud.appendChild(createDraggableLabel({text: 'Urgent', color: LABEL_COLORS[0]}));
+                 labelCloud.appendChild(createDraggableLabel({text: 'Work', color: LABEL_COLORS[1]}));
+                 saveLabels();
+            } else {
+                 labels.forEach(l => labelCloud.appendChild(createDraggableLabel(l)));
+            }
+        }
+        
+        function initializeColorPalette() {
+            LABEL_COLORS.forEach((color, index) => {
+                const swatch = document.createElement('div');
+                swatch.className = 'color-swatch';
+                swatch.style.backgroundColor = color;
+                swatch.dataset.color = color;
+                if (index === 0) swatch.classList.add('selected');
+                colorPalette.appendChild(swatch);
+            });
+
+            colorPalette.addEventListener('click', e => {
+                if (e.target.classList.contains('color-swatch')) {
+                    colorPalette.querySelectorAll('.color-swatch').forEach(sw => sw.classList.remove('selected'));
+                    e.target.classList.add('selected');
+                }
+            });
+        }
+        
+        function initializePriorities() {
+            Object.values(PRIORITIES).forEach(p => {
+                priorityLabelsContainer.appendChild(createDraggableLabel({ text: p.name, color: p.color, isPriority: true, isDeletable: false }));
+            });
+        }
+        
+        // --- EVENT HANDLERS ---
+        function handleAddLabel() {
+            const labelText = newLabelInput.value.trim();
+            if (labelText) {
+                const selectedSwatch = colorPalette.querySelector('.color-swatch.selected');
+                const newColor = selectedSwatch ? selectedSwatch.dataset.color : LABEL_COLORS[0];
+                labelCloud.appendChild(createDraggableLabel({ text: labelText, color: newColor }));
+                saveLabels();
+                newLabelInput.value = '';
+                newLabelInput.focus();
+            }
+        }
+        
+        function handleListClick(e) {
+            const itemEl = e.target.closest('.todo-item');
+            if (!itemEl) return;
+
+            if (e.target.closest('.checkbox')) {
+                itemEl.classList.toggle('completed');
+                saveList();
+            } else if (e.target.closest('.delete-btn')) {
+                itemEl.remove();
+                 if (leftColumn.children.length === 0 && rightColumn.children.length === 0) {
+                     leftColumn.appendChild(createTodoItem());
+                }
+                saveList();
+            } else if (e.target.classList.contains('delete-item-label-btn')) {
+                const labelToRemove = e.target.closest('.item-label');
+                const isPriority = Object.values(PRIORITIES).some(p => p.name === labelToRemove.dataset.text);
+                if (isPriority) {
+                    applyPriorityBackground(itemEl, null);
+                }
+                labelToRemove.remove();
+                sortAndRedistributeItems();
+                saveList();
+            }
+        }
+        
+        function handleListKeyDown(e) {
+            if (e.target.classList.contains('todo-text') && e.key === 'Enter') {
+                e.preventDefault();
+                if (document.querySelectorAll('.todo-item').length < 20) {
+                    const newItem = createTodoItem();
+                    getTodoContainer().appendChild(newItem);
+                    newItem.querySelector('.todo-text').focus();
+                    saveList();
+                }
+            }
+        }
+
+        function handleStartNewList() {
+            const unfinishedItems = [];
+            document.querySelectorAll('.todo-item:not(.completed)').forEach(itemEl => {
+                const text = itemEl.querySelector('.todo-text').textContent.trim();
+                const labels = [];
+                itemEl.querySelectorAll('.item-label').forEach(labelEl => {
+                    labels.push({ text: labelEl.dataset.text, color: labelEl.style.backgroundColor });
+                });
+                if (text) unfinishedItems.push({ text, isCompleted: false, labels });
+            });
+
+            leftColumn.innerHTML = ''; rightColumn.innerHTML = '';
+
+            if (unfinishedItems.length > 0) {
+                unfinishedItems.forEach((itemData, index) => {
+                     (index < 10 ? leftColumn : rightColumn).appendChild(createTodoItem(itemData));
+                });
+            } else {
+                leftColumn.appendChild(createTodoitem());
+            }
+            sortAndRedistributeItems();
+            saveList();
+        }
+
+        function setSortMode(mode) {
+            currentSortMode = mode;
+            localStorage.setItem(SORT_MODE_KEY, mode);
+            sortByLabelBtn.classList.toggle('active', mode === 'label');
+            sortByPriorityBtn.classList.toggle('active', mode === 'priority');
+            sortAndRedistributeItems();
+        }
+
+        // --- INITIALIZATION ---
+        document.addEventListener('click', handleListClick);
+        document.addEventListener('input', e => { if (e.target.classList.contains('todo-text')) saveList(); });
+        document.addEventListener('keydown', handleListKeyDown);
+        
+        newListBtn.addEventListener('click', handleStartNewList);
+        addLabelBtn.addEventListener('click', handleAddLabel);
+        newLabelInput.addEventListener('keydown', e => { if (e.key === 'Enter') handleAddLabel(); });
+        
+        sortByLabelBtn.addEventListener('click', () => setSortMode('label'));
+        sortByPriorityBtn.addEventListener('click', () => setSortMode('priority'));
+        
+        initializeColorPalette();
+        initializePriorities();
+        loadLabels();
+        loadList();
+        setSortMode(currentSortMode); // Apply initial sort mode
+    </script>
+</body>
+</html>
+
