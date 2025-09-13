@@ -31,10 +31,30 @@
         .todo-item:last-child {
             border-bottom: none;
         }
-        /* Priority Backgrounds */
-        .priority-high { background-color: #3d1f23 !important; }
-        .priority-medium { background-color: #3e2f1e !important; }
-        .priority-low { background-color: #1c2a3b !important; }
+        /* Priority Indicator Bars */
+        .priority-high, .priority-medium, .priority-low { background-color: transparent !important; }
+
+        .todo-item::before {
+            content: '';
+            position: absolute;
+            left: 0;
+            top: 0;
+            width: 4px;
+            height: 100%;
+            background-color: transparent;
+            border-top-left-radius: 8px;
+            border-bottom-left-radius: 8px;
+            transition: background-color 0.3s;
+        }
+        .todo-item.priority-high::before {
+            background-color: #ef4444;
+        }
+        .todo-item.priority-medium::before {
+            background-color: #f97316;
+        }
+        .todo-item.priority-low::before {
+            background-color: #22c55e;
+        }
 
         .todo-item.drag-over {
             background-color: #374151 !important; /* Highlight when dragging over */
@@ -249,7 +269,7 @@
         const PRIORITIES = {
             High: { color: '#ef4444', name: 'High' },
             Medium: { color: '#f97316', name: 'Medium' },
-            Low: { color: '#3b82f6', name: 'Low' }
+            Low: { color: '#22c55e', name: 'Low' }
         };
 
         let currentSortMode = localStorage.getItem(SORT_MODE_KEY) || 'label';
