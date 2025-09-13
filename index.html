@@ -87,29 +87,33 @@
             position: relative;
             font-size: 1.25rem;
             line-height: 1.5;
-            transition: color 0.1s 0.3s;
+            transition: opacity 0.3s ease;
         }
-        .main-content::after {
+
+        .todo-text::after {
             content: '';
             position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background-color: #6b7280; /* Gray strikethrough */
-            transform: scaleX(0);
+            top: 50%;
+            left: -2%;
+            width: 104%;
+            height: 2px;
+            background-color: #e5e7eb;
+            transform: scaleX(0) rotate(-4deg);
             transform-origin: left;
-            transition: transform 0.4s cubic-bezier(0.65, 0, 0.45, 1);
-            border-radius: 2px;
+            transition: transform 0.3s cubic-bezier(0.65, 0, 0.45, 1);
             pointer-events: none;
         }
-        .completed .main-content::after {
-            transform: scaleX(1);
+
+        .todo-item.completed {
+            background-color: rgba(34, 197, 94, 0.1);
         }
+
+        .completed .todo-text::after {
+            transform: scaleX(1) rotate(-4deg);
+        }
+
         .completed .todo-text, .completed .item-label {
-            color: transparent !important;
-            background-color: transparent !important;
-            border-color: transparent !important;
+            opacity: 0.4;
         }
         .delete-btn {
             color: #9ca3af; /* Tailwind gray-400 */
