@@ -90,26 +90,29 @@
             transition: opacity 0.3s ease;
         }
 
-        .todo-text::after {
-            content: '';
+        .scribble-svg {
             position: absolute;
-            top: 50%;
-            left: -2%;
-            width: 104%;
-            height: 2px;
-            background-color: #e5e7eb;
-            transform: scaleX(0) rotate(-4deg);
-            transform-origin: left;
-            transition: transform 0.3s cubic-bezier(0.65, 0, 0.45, 1);
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
             pointer-events: none;
+            z-index: 1;
+        }
+
+        .scribble-svg path {
+            stroke: #e5e7eb;
+            stroke-dasharray: 250;
+            stroke-dashoffset: 250;
+            transition: stroke-dashoffset 0.4s cubic-bezier(0.65, 0, 0.45, 1);
         }
 
         .todo-item.completed {
             background-color: rgba(34, 197, 94, 0.1);
         }
 
-        .completed .todo-text::after {
-            transform: scaleX(1) rotate(-4deg);
+        .completed .scribble-svg path {
+            stroke-dashoffset: 0;
         }
 
         .completed .todo-text, .completed .item-label {
@@ -371,6 +374,18 @@
             todoText.setAttribute('spellcheck', 'false');
             todoText.textContent = text;
             mainContent.appendChild(todoText);
+
+            const svgNS = "http://www.w3.org/2000/svg";
+            const scribbleSvg = document.createElementNS(svgNS, "svg");
+            scribbleSvg.setAttribute("class", "scribble-svg");
+            scribbleSvg.setAttribute("viewBox", "0 0 200 20");
+            scribbleSvg.setAttribute("preserveAspectRatio", "none");
+            const scribblePath = document.createElementNS(svgNS, "path");
+            scribblePath.setAttribute("d", "M2,10 C20,-5, 40,25, 60,10 S80,-5, 120,12 S150,25, 198,5");
+            scribblePath.setAttribute("stroke-width", "2");
+            scribblePath.setAttribute("fill", "none");
+            scribbleSvg.appendChild(scribblePath);
+            mainContent.appendChild(scribbleSvg);
 
             const labelsContainer = document.createElement('div');
             labelsContainer.className = 'labels-container flex flex-wrap gap-2 mt-1';
