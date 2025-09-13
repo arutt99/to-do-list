@@ -180,11 +180,6 @@
         .color-swatch.selected {
             border-color: #3b82f6; /* Accent blue */
         }
-        .todo-column {
-            background-color: rgba(0,0,0,0.1);
-            border-radius: 8px;
-            padding: 1rem;
-        }
     </style>
 </head>
 <body class="bg-gray-900">
@@ -198,13 +193,14 @@
             </header>
 
             <div class="flex justify-center items-center gap-2 mb-8">
-                <span class="text-lg text-gray-400">View:</span>
-                <button id="view-by-label-btn" class="sort-btn active">Label</button>
-                <button id="view-by-priority-btn" class="sort-btn">Priority</button>
+                <span class="text-lg text-gray-400">Sort by:</span>
+                <button id="sort-by-label-btn" class="sort-btn active">Label</button>
+                <button id="sort-by-priority-btn" class="sort-btn">Priority</button>
             </div>
 
-            <div id="columns-container" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 auto-rows-fr gap-6">
-                <!-- Dynamic columns will be inserted here -->
+            <div id="columns-container" class="flex flex-col md:flex-row gap-x-8">
+                <div id="left-column" class="flex-1 space-y-4 min-h-[50px]"></div>
+                <div id="right-column" class="flex-1 space-y-4 min-h-[50px]"></div>
             </div>
 
             <div class="border-t border-gray-700 mt-8 pt-6 flex flex-col sm:flex-row items-center justify-end">
@@ -235,15 +231,16 @@
     </div>
 
     <script>
-        const columnsContainer = document.getElementById('columns-container');
+        const leftColumn = document.getElementById('left-column');
+        const rightColumn = document.getElementById('right-column');
         const newListBtn = document.getElementById('new-list-btn');
         const newLabelInput = document.getElementById('new-label-input');
         const addLabelBtn = document.getElementById('add-label-btn');
         const labelCloud = document.getElementById('label-cloud');
         const colorPalette = document.getElementById('color-palette');
         const priorityLabelsContainer = document.getElementById('priority-labels');
-        const viewByLabelBtn = document.getElementById('view-by-label-btn');
-        const viewByPriorityBtn = document.getElementById('view-by-priority-btn');
+        const sortByLabelBtn = document.getElementById('sort-by-label-btn');
+        const sortByPriorityBtn = document.getElementById('sort-by-priority-btn');
 
         const TODO_STORAGE_KEY = 'persistentTodoList_v5';
         const LABELS_STORAGE_KEY = 'customTodoLabels_v4';
@@ -258,102 +255,52 @@
         let currentSortMode = localStorage.getItem(SORT_MODE_KEY) || 'label';
 
         // --- CORE TODO FUNCTIONS ---
-        function renderBoard() {
-            const items = JSON.parse(localStorage.getItem(TODO_STORAGE_KEY)) || [];
-            columnsContainer.innerHTML = '';
+        function getTodoContainer() {
+            return document.querySelectorAll('.todo-item').length < 10 ? leftColumn : rightColumn;
+        }
+
+        function sortAndRedistributeItems() {
+            const allItems = document.querySelectorAll('.todo-item');
+            if (allItems.length <= 1) return;
+
+            const itemData = Array.from(allItems).map(itemEl => {
+                const firstLabelEl = itemEl.querySelector('.item-label:not(.priority-tag)');
+                const priorityLabelEl = itemEl.querySelector('.item-label.priority-tag');
+                return {
+                    element: itemEl,
+                    firstLabelText: firstLabelEl ? firstLabelEl.dataset.text : null,
+                    priorityText: priorityLabelEl ? priorityLabelEl.dataset.text : null
+                };
+            });
 
             if (currentSortMode === 'label') {
-                const groupedByLabel = { 'Uncategorized': [] };
-                const labelOrder = Array.from(labelCloud.querySelectorAll('.draggable-label .label-text')).map(span => span.textContent);
-                labelOrder.forEach(label => { groupedByLabel[label] = []; });
-
-                const priorityLabelNames = Object.values(PRIORITIES).map(p => p.name);
-
-                items.forEach(item => {
-                    const itemLabels = item.labels || [];
-                    const nonPriorityLabels = itemLabels.filter(label => !priorityLabelNames.includes(label.text));
-
-                    if (nonPriorityLabels.length === 0) {
-                        groupedByLabel['Uncategorized'].push(item);
-                    } else {
-                        nonPriorityLabels.forEach(label => {
-                            if (!groupedByLabel[label.text]) {
-                                groupedByLabel[label.text] = [];
-                            }
-                            groupedByLabel[label.text].push(item);
-                        });
-                    }
+                const labelOrder = Array.from(labelCloud.querySelectorAll('.label-text')).map(span => span.textContent);
+                itemData.sort((a, b) => {
+                    const indexA = a.firstLabelText ? labelOrder.indexOf(a.firstLabelText) : Infinity;
+                    const indexB = b.firstLabelText ? labelOrder.indexOf(b.firstLabelText) : Infinity;
+                    const finalIndexA = indexA === -1 ? Infinity : indexA;
+                    const finalIndexB = indexB === -1 ? Infinity : indexB;
+                    return finalIndexA - finalIndexB;
                 });
-
-                const boardFragment = document.createDocumentFragment();
-                const allLabelsInOrder = [...labelOrder, 'Uncategorized'];
-
-                allLabelsInOrder.forEach(label => {
-                    const itemsInGroup = groupedByLabel[label] || [];
-
-                    // Don't render the 'Uncategorized' column if it's empty
-                    if (label === 'Uncategorized' && itemsInGroup.length === 0) {
-                        return;
-                    }
-
-                    const columnWrapper = document.createElement('div');
-                    columnWrapper.className = 'todo-column flex flex-col gap-y-4';
-
-                        const columnHeader = document.createElement('h3');
-                        columnHeader.className = 'text-xl font-medium text-gray-300 text-center mb-2';
-                        columnHeader.textContent = label;
-                        columnWrapper.appendChild(columnHeader);
-
-                        itemsInGroup.forEach(itemData => {
-                            const itemEl = createTodoItem(itemData);
-                            columnWrapper.appendChild(itemEl);
-                        });
-                        boardFragment.appendChild(columnWrapper);
+            } else { // Sort by priority
+                const priorityOrder = { 'High': 0, 'Medium': 1, 'Low': 2 };
+                itemData.sort((a, b) => {
+                    const priorityA = a.priorityText ? priorityOrder[a.priorityText] : Infinity;
+                    const priorityB = b.priorityText ? priorityOrder[b.priorityText] : Infinity;
+                    return priorityA - priorityB;
                 });
-                columnsContainer.appendChild(boardFragment);
-
-            } else {
-                // --- Priority-Based View Logic ---
-                const groupedByPriority = {
-                    'High': [],
-                    'Medium': [],
-                    'Low': []
-                };
-                const priorityNames = Object.keys(PRIORITIES);
-
-                items.forEach(item => {
-                    let priority = 'Low'; // Default to Low
-                    const priorityLabel = (item.labels || []).find(label => priorityNames.includes(label.text));
-                    if (priorityLabel) {
-                        priority = priorityLabel.text;
-                    }
-                    groupedByPriority[priority].push(item);
-                });
-
-                const boardFragment = document.createDocumentFragment();
-                const priorityOrder = ['High', 'Medium', 'Low'];
-
-                priorityOrder.forEach(priority => {
-                    const itemsInGroup = groupedByPriority[priority];
-
-                    const columnWrapper = document.createElement('div');
-                    columnWrapper.className = 'todo-column flex flex-col gap-y-4';
-
-                    const columnHeader = document.createElement('h3');
-                    columnHeader.className = 'text-xl font-medium text-gray-300 text-center mb-2';
-                    columnHeader.textContent = priority;
-                    columnWrapper.appendChild(columnHeader);
-
-                    if (itemsInGroup.length > 0) {
-                        itemsInGroup.forEach(itemData => {
-                            const itemEl = createTodoItem(itemData);
-                            columnWrapper.appendChild(itemEl);
-                        });
-                    }
-                    boardFragment.appendChild(columnWrapper);
-                });
-                columnsContainer.appendChild(boardFragment);
             }
+
+            const fragment = document.createDocumentFragment();
+            itemData.forEach(data => fragment.appendChild(data.element));
+
+            leftColumn.innerHTML = '';
+            rightColumn.innerHTML = '';
+
+            Array.from(fragment.children).forEach((node, index) => {
+                const container = index < 10 ? leftColumn : rightColumn;
+                container.appendChild(node);
+            });
         }
 
         function renderItemLabel(labelData, isPriority = false) {
@@ -429,27 +376,19 @@
                 todoItem.classList.remove('drag-over');
                 try {
                     const droppedLabelData = JSON.parse(e.dataTransfer.getData('application/json'));
-                    const itemId = todoItem.id.replace('item-', '');
+                    const container = todoItem.querySelector('.labels-container');
 
-                    saveList(); // Save any pending text edits first
-                    const items = JSON.parse(localStorage.getItem(TODO_STORAGE_KEY)) || [];
-                    const itemToUpdate = items.find(item => item.id === itemId);
+                    if (droppedLabelData.isPriority) {
+                        // Remove existing priority tags and background
+                        container.querySelectorAll('.priority-tag').forEach(tag => tag.remove());
+                        applyPriorityBackground(todoItem, droppedLabelData.text);
+                    }
 
-                    if (itemToUpdate) {
-                        if (droppedLabelData.isPriority) {
-                            // Remove existing priority label from the data
-                            const priorityNames = Object.values(PRIORITIES).map(p => p.name);
-                            itemToUpdate.labels = itemToUpdate.labels.filter(label => !priorityNames.includes(label.text));
-                        }
-
-                        // Add the new label if it doesn't already exist
-                        const exists = (itemToUpdate.labels || []).some(label => label.text === droppedLabelData.text);
-                        if (!exists) {
-                            itemToUpdate.labels.push({ text: droppedLabelData.text, color: droppedLabelData.color });
-                        }
-
-                        localStorage.setItem(TODO_STORAGE_KEY, JSON.stringify(items));
-                        renderBoard();
+                    const exists = container.querySelector(`.item-label[data-text="${droppedLabelData.text}"]`);
+                    if (!exists) {
+                        container.appendChild(renderItemLabel(droppedLabelData, droppedLabelData.isPriority));
+                        sortAndRedistributeItems();
+                        saveList();
                     }
                 } catch (error) { console.error("Failed to parse drop data:", error); }
             });
@@ -479,9 +418,16 @@
         }
 
         function loadList() {
-            // The loading logic is now inside renderBoard.
-            // We just need to call it.
-            renderBoard();
+            leftColumn.innerHTML = ''; rightColumn.innerHTML = '';
+            const items = JSON.parse(localStorage.getItem(TODO_STORAGE_KEY)) || [];
+            if (items.length === 0) {
+                leftColumn.appendChild(createTodoItem());
+            } else {
+                items.forEach((itemData, index) => {
+                    (index < 10 ? leftColumn : rightColumn).appendChild(createTodoItem(itemData));
+                });
+            }
+            sortAndRedistributeItems();
         }
 
         // --- LABEL & PRIORITY FUNCTIONS ---
@@ -502,22 +448,10 @@
                 deleteBtn.innerHTML = '&times;';
                 labelEl.appendChild(deleteBtn);
                 deleteBtn.addEventListener('click', () => {
-                    const labelTextToRemove = labelEl.querySelector('.label-text').textContent;
-
-                    // Remove the label from the cloud
                     labelEl.remove();
                     saveLabels();
-
-                    // Remove the label from all todo items
-                    saveList(); // Persist any pending text edits first
-                    const items = JSON.parse(localStorage.getItem(TODO_STORAGE_KEY)) || [];
-                    items.forEach(item => {
-                        item.labels = (item.labels || []).filter(label => label.text !== labelTextToRemove);
-                    });
-                    localStorage.setItem(TODO_STORAGE_KEY, JSON.stringify(items));
-
-                    // Re-render the board
-                    renderBoard();
+                    sortAndRedistributeItems();
+                    saveList();
                 });
             }
 
@@ -584,7 +518,6 @@
                 const newColor = selectedSwatch ? selectedSwatch.dataset.color : LABEL_COLORS[0];
                 labelCloud.appendChild(createDraggableLabel({ text: labelText, color: newColor }));
                 saveLabels();
-                renderBoard();
                 newLabelInput.value = '';
                 newLabelInput.focus();
             }
@@ -598,63 +531,65 @@
                 itemEl.classList.toggle('completed');
                 saveList();
             } else if (e.target.closest('.delete-btn')) {
-                const itemId = itemEl.id.replace('item-', '');
-                const items = JSON.parse(localStorage.getItem(TODO_STORAGE_KEY)) || [];
-                const filteredItems = items.filter(item => item.id !== itemId);
-                localStorage.setItem(TODO_STORAGE_KEY, JSON.stringify(filteredItems));
-                renderBoard();
-            } else if (e.target.classList.contains('delete-item-label-btn')) {
-                const labelTextToRemove = e.target.closest('.item-label').dataset.text;
-                const itemId = itemEl.id.replace('item-', '');
-
-                saveList(); // Save any pending text edits first
-                const items = JSON.parse(localStorage.getItem(TODO_STORAGE_KEY)) || [];
-                const itemToUpdate = items.find(item => item.id === itemId);
-
-                if (itemToUpdate) {
-                    itemToUpdate.labels = (itemToUpdate.labels || []).filter(label => label.text !== labelTextToRemove);
-                    localStorage.setItem(TODO_STORAGE_KEY, JSON.stringify(items));
-                    renderBoard();
+                itemEl.remove();
+                 if (leftColumn.children.length === 0 && rightColumn.children.length === 0) {
+                     leftColumn.appendChild(createTodoItem());
                 }
+                saveList();
+            } else if (e.target.classList.contains('delete-item-label-btn')) {
+                const labelToRemove = e.target.closest('.item-label');
+                const isPriority = Object.values(PRIORITIES).some(p => p.name === labelToRemove.dataset.text);
+                if (isPriority) {
+                    applyPriorityBackground(itemEl, null);
+                }
+                labelToRemove.remove();
+                sortAndRedistributeItems();
+                saveList();
             }
         }
 
         function handleListKeyDown(e) {
             if (e.target.classList.contains('todo-text') && e.key === 'Enter') {
                 e.preventDefault();
-                saveList(); // Save any edits in the current item
-                const items = JSON.parse(localStorage.getItem(TODO_STORAGE_KEY)) || [];
-                if (items.length < 20) {
-                    const newItemId = Date.now();
-                    items.push({ id: newItemId, text: '', isCompleted: false, labels: [] });
-                    localStorage.setItem(TODO_STORAGE_KEY, JSON.stringify(items));
-                    renderBoard();
-
-                    const newItemEl = document.getElementById(`item-${newItemId}`);
-                    if (newItemEl) {
-                        newItemEl.querySelector('.todo-text').focus();
-                    }
+                if (document.querySelectorAll('.todo-item').length < 20) {
+                    const newItem = createTodoItem();
+                    getTodoContainer().appendChild(newItem);
+                    newItem.querySelector('.todo-text').focus();
+                    saveList();
                 }
             }
         }
 
         function handleStartNewList() {
-            // First, ensure the latest state is saved from the DOM.
+            const unfinishedItems = [];
+            document.querySelectorAll('.todo-item:not(.completed)').forEach(itemEl => {
+                const text = itemEl.querySelector('.todo-text').textContent.trim();
+                const labels = [];
+                itemEl.querySelectorAll('.item-label').forEach(labelEl => {
+                    labels.push({ text: labelEl.dataset.text, color: labelEl.style.backgroundColor });
+                });
+                if (text) unfinishedItems.push({ text, isCompleted: false, labels });
+            });
+
+            leftColumn.innerHTML = ''; rightColumn.innerHTML = '';
+
+            if (unfinishedItems.length > 0) {
+                unfinishedItems.forEach((itemData, index) => {
+                     (index < 10 ? leftColumn : rightColumn).appendChild(createTodoItem(itemData));
+                });
+            } else {
+                leftColumn.appendChild(createTodoitem());
+            }
+            sortAndRedistributeItems();
             saveList();
-            const items = JSON.parse(localStorage.getItem(TODO_STORAGE_KEY)) || [];
-
-            const unfinishedItems = items.filter(item => !item.isCompleted && item.text.trim() !== '');
-
-            localStorage.setItem(TODO_STORAGE_KEY, JSON.stringify(unfinishedItems));
-            renderBoard();
         }
 
         function setSortMode(mode) {
             currentSortMode = mode;
             localStorage.setItem(SORT_MODE_KEY, mode);
-            viewByLabelBtn.classList.toggle('active', mode === 'label');
-            viewByPriorityBtn.classList.toggle('active', mode === 'priority');
-            renderBoard();
+            sortByLabelBtn.classList.toggle('active', mode === 'label');
+            sortByPriorityBtn.classList.toggle('active', mode === 'priority');
+            sortAndRedistributeItems();
         }
 
         // --- INITIALIZATION ---
@@ -666,8 +601,8 @@
         addLabelBtn.addEventListener('click', handleAddLabel);
         newLabelInput.addEventListener('keydown', e => { if (e.key === 'Enter') handleAddLabel(); });
 
-        viewByLabelBtn.addEventListener('click', () => setSortMode('label'));
-        viewByPriorityBtn.addEventListener('click', () => setSortMode('priority'));
+        sortByLabelBtn.addEventListener('click', () => setSortMode('label'));
+        sortByPriorityBtn.addEventListener('click', () => setSortMode('priority'));
 
         initializeColorPalette();
         initializePriorities();
