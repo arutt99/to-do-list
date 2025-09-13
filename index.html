@@ -11,42 +11,51 @@
     <style>
         body {
             font-family: 'EB Garamond', serif;
-            background-color: #FBF5E9;
+            background-color: #111827; /* Tailwind gray-900 */
+            color: #e5e7eb; /* Tailwind gray-200 */
         }
         .paper {
-            background-color: #FFFDF6;
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1), 0 0 2px rgba(0, 0, 0, 0.05);
-            border-radius: 4px;
-            border: 1px solid #EAE1D1;
+            background-color: #1f2937; /* Tailwind gray-800 */
+            box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1), 0 4px 6px -2px rgba(0,0,0,0.05);
+            border-radius: 8px;
+            border: 1px solid #374151; /* Tailwind gray-700 */
         }
         h1, .todo-text, .label-text {
-             color: #4a2c2a;
+             color: #e5e7eb; /* Tailwind gray-200 */
         }
         .todo-item {
             position: relative;
             transition: background-color 0.3s;
+            border-bottom: 1px solid #374151; /* Subtle separator */
+        }
+        .todo-item:last-child {
+            border-bottom: none;
         }
         /* Priority Backgrounds */
-        .priority-high { background-color: #ffebee !important; }
-        .priority-medium { background-color: #fff8e1 !important; }
-        .priority-low { background-color: #e3f2fd !important; }
+        .priority-high { background-color: #3d1f23 !important; }
+        .priority-medium { background-color: #3e2f1e !important; }
+        .priority-low { background-color: #1c2a3b !important; }
 
         .todo-item.drag-over {
-            background-color: #f0ebe0 !important; /* Highlight when dragging over */
+            background-color: #374151 !important; /* Highlight when dragging over */
         }
         .checkbox {
             width: 24px;
             height: 24px;
-            border: 2px solid #8a7a61;
+            border: 2px solid #6b7280; /* Tailwind gray-500 */
             border-radius: 4px;
             cursor: pointer;
             flex-shrink: 0;
-            transition: border-color 0.3s ease;
+            transition: border-color 0.3s ease, background-color 0.3s ease;
+        }
+        .completed .checkbox {
+            background-color: #3b82f6; /* A nice blue for completed */
+            border-color: #3b82f6;
         }
         .checkmark__path {
             stroke-dasharray: 48;
             stroke-dashoffset: 48;
-            stroke: #4a2c2a;
+            stroke: #ffffff; /* White checkmark */
             stroke-width: 3;
             transition: stroke-dashoffset 0.4s cubic-bezier(0.65, 0, 0.45, 1);
         }
@@ -67,7 +76,7 @@
             left: 0;
             width: 100%;
             height: 100%;
-            background-color: #4a2c2a;
+            background-color: #6b7280; /* Gray strikethrough */
             transform: scaleX(0);
             transform-origin: left;
             transition: transform 0.4s cubic-bezier(0.65, 0, 0.45, 1);
@@ -78,12 +87,12 @@
             transform: scaleX(1);
         }
         .completed .todo-text, .completed .item-label {
-            color: transparent !important; /* Use important to override inline styles */
+            color: transparent !important;
             background-color: transparent !important;
             border-color: transparent !important;
         }
         .delete-btn {
-            color: #b0a088;
+            color: #9ca3af; /* Tailwind gray-400 */
             font-size: 1.5rem;
             font-weight: bold;
             cursor: pointer;
@@ -92,38 +101,40 @@
             transition: opacity 0.2s, color 0.2s;
         }
         .todo-item:hover .delete-btn { opacity: 1; }
-        .delete-btn:hover { color: #c94a4a; }
+        .delete-btn:hover { color: #ef4444; } /* Tailwind red-500 */
 
         .control-btn, .sort-btn {
             font-family: 'EB Garamond', serif;
-            background-color: #EAE1D1;
-            border: 1px solid #D9CDBA;
-            color: #4a2c2a;
+            background-color: #374151; /* Tailwind gray-700 */
+            border: 1px solid #4b5563; /* Tailwind gray-600 */
+            color: #e5e7eb; /* Tailwind gray-200 */
             padding: 0.5rem 1rem;
             border-radius: 6px;
             cursor: pointer;
             transition: background-color 0.2s, box-shadow 0.2s, color 0.2s;
         }
         .control-btn:hover, .sort-btn:hover {
-            background-color: #D9CDBA;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+            background-color: #4b5563; /* Tailwind gray-600 */
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
         }
         .sort-btn.active {
-            background-color: #4a2c2a;
-            color: #FFFDF6;
-            border-color: #4a2c2a;
+            background-color: #3b82f6; /* Accent blue */
+            color: #ffffff;
+            border-color: #3b82f6;
         }
 
         /* Label Manager & Tag Styles */
         .label-input {
-            border: 1px solid #D9CDBA;
-            background-color: #FBF5E9;
-            outline-color: #8a7a61;
+            border: 1px solid #4b5563; /* Tailwind gray-600 */
+            background-color: #1f2937; /* Tailwind gray-800 */
+            outline-color: #3b82f6; /* Accent blue on focus */
+            color: #e5e7eb;
         }
         .draggable-label {
-            border: 1px solid rgba(0,0,0,0.1);
+            border: 1px solid rgba(255,255,255,0.1);
             cursor: grab;
             color: white;
+            font-weight: 500;
         }
         .draggable-label:active { cursor: grabbing; }
         .delete-label-btn {
@@ -138,6 +149,7 @@
             color: white;
             transition: color 0.1s 0.3s, background-color 0.1s 0.3s;
             position: relative;
+            font-weight: 500;
         }
         .delete-item-label-btn {
             position: absolute;
@@ -146,7 +158,7 @@
             font-size: 14px;
             line-height: 1;
             font-weight: bold;
-            color: rgba(0,0,0,0.4);
+            color: rgba(255,255,255,0.5);
             cursor: pointer;
             opacity: 0;
             transition: opacity 0.2s;
@@ -166,14 +178,14 @@
             transform: scale(1.1);
         }
         .color-swatch.selected {
-            border-color: #4a2c2a;
+            border-color: #3b82f6; /* Accent blue */
         }
     </style>
 </head>
-<body class="bg-[#FBF5E9]">
+<body class="bg-gray-900">
 
     <div class="flex flex-col xl:flex-row items-start justify-center w-full min-h-screen gap-8 p-4 sm:p-6 md:p-8">
-        
+
         <!-- Main To-Do List -->
         <main class="paper w-full max-w-5xl p-6 sm:p-8">
             <header class="text-center mb-4">
@@ -181,29 +193,29 @@
             </header>
 
             <div class="flex justify-center items-center gap-2 mb-8">
-                <span class="text-lg text-[#4a2c2a]">Sort by:</span>
+                <span class="text-lg text-gray-400">Sort by:</span>
                 <button id="sort-by-label-btn" class="sort-btn active">Label</button>
                 <button id="sort-by-priority-btn" class="sort-btn">Priority</button>
             </div>
-            
+
             <div id="columns-container" class="flex flex-col md:flex-row gap-x-8">
                 <div id="left-column" class="flex-1 space-y-4 min-h-[50px]"></div>
                 <div id="right-column" class="flex-1 space-y-4 min-h-[50px]"></div>
             </div>
-    
-            <div class="border-t border-[#EAE1D1] mt-8 pt-6 flex flex-col sm:flex-row items-center justify-end">
+
+            <div class="border-t border-gray-700 mt-8 pt-6 flex flex-col sm:flex-row items-center justify-end">
                 <button id="new-list-btn" class="control-btn w-full sm:w-auto">Start New List</button>
             </div>
         </main>
-    
+
         <!-- Label Manager -->
         <aside class="paper w-full xl:w-80 flex-shrink-0 p-6">
-             <h2 class="text-2xl font-medium text-[#4a2c2a] mb-4 text-center xl:text-left">Priorities</h2>
+             <h2 class="text-2xl font-medium text-gray-200 mb-4 text-center xl:text-left">Priorities</h2>
             <div id="priority-labels" class="flex flex-wrap justify-center xl:justify-start gap-2 mb-6">
                 <!-- Priority labels will be inserted here -->
             </div>
 
-            <h2 class="text-2xl font-medium text-[#4a2c2a] mb-4 text-center xl:text-left">Custom Labels</h2>
+            <h2 class="text-2xl font-medium text-gray-200 mb-4 text-center xl:text-left">Custom Labels</h2>
             <div class="flex gap-2 mb-4">
                 <input type="text" id="new-label-input" placeholder="New label..." class="label-input rounded-md px-2 py-1 w-full text-lg">
                 <button id="add-label-btn" class="control-btn !px-3">+</button>
@@ -233,11 +245,11 @@
         const TODO_STORAGE_KEY = 'persistentTodoList_v5';
         const LABELS_STORAGE_KEY = 'customTodoLabels_v4';
         const SORT_MODE_KEY = 'todoListSortMode_v1';
-        const LABEL_COLORS = ['#d32f2f', '#388e3c', '#1976d2', '#f57c00', '#7b1fa2', '#5d4037', '#455a64', '#00796b', '#c2185b', '#0288d1', '#0097a7', '#689f38', '#e64a19', '#616161', '#512da8', '#8d6e63'];
+        const LABEL_COLORS = ['#f472b6', '#a78bfa', '#60a5fa', '#34d399', '#facc15', '#fb923c', '#e11d48', '#8b5cf6', '#22d3ee', '#4ade80', '#f97316', '#0ea5e9', '#d946ef', '#6366f1', '#10b981', '#f59e0b'];
         const PRIORITIES = {
-            High: { color: '#ef5350', name: 'High' },
-            Medium: { color: '#ffb74d', name: 'Medium' },
-            Low: { color: '#42a5f5', name: 'Low' }
+            High: { color: '#ef4444', name: 'High' },
+            Medium: { color: '#f97316', name: 'Medium' },
+            Low: { color: '#3b82f6', name: 'Low' }
         };
 
         let currentSortMode = localStorage.getItem(SORT_MODE_KEY) || 'label';
@@ -246,7 +258,7 @@
         function getTodoContainer() {
             return document.querySelectorAll('.todo-item').length < 10 ? leftColumn : rightColumn;
         }
-        
+
         function sortAndRedistributeItems() {
             const allItems = document.querySelectorAll('.todo-item');
             if (allItems.length <= 1) return;
@@ -305,7 +317,7 @@
             deleteTagBtn.className = 'delete-item-label-btn';
             deleteTagBtn.innerHTML = '&times;';
             itemLabel.appendChild(deleteTagBtn);
-            
+
             return itemLabel;
         }
 
@@ -352,7 +364,7 @@
             const deleteBtn = document.createElement('div');
             deleteBtn.className = 'delete-btn';
             deleteBtn.innerHTML = '&times;';
-            
+
             todoItem.appendChild(checkbox);
             todoItem.appendChild(mainContent);
             todoItem.appendChild(deleteBtn);
@@ -365,13 +377,13 @@
                 try {
                     const droppedLabelData = JSON.parse(e.dataTransfer.getData('application/json'));
                     const container = todoItem.querySelector('.labels-container');
-                    
+
                     if (droppedLabelData.isPriority) {
                         // Remove existing priority tags and background
                         container.querySelectorAll('.priority-tag').forEach(tag => tag.remove());
                         applyPriorityBackground(todoItem, droppedLabelData.text);
                     }
-                    
+
                     const exists = container.querySelector(`.item-label[data-text="${droppedLabelData.text}"]`);
                     if (!exists) {
                         container.appendChild(renderItemLabel(droppedLabelData, droppedLabelData.isPriority));
@@ -383,13 +395,13 @@
 
             return todoItem;
         }
-        
+
         function saveList() {
             const items = [];
             document.querySelectorAll('.todo-item').forEach(itemEl => {
                 const textContent = itemEl.querySelector('.todo-text').textContent.trim();
                 if (document.querySelectorAll('.todo-item').length === 1 && textContent === '') return;
-                
+
                 const labels = [];
                 itemEl.querySelectorAll('.item-label').forEach(labelEl => {
                     labels.push({ text: labelEl.dataset.text, color: labelEl.style.backgroundColor });
@@ -417,7 +429,7 @@
             }
             sortAndRedistributeItems();
         }
-        
+
         // --- LABEL & PRIORITY FUNCTIONS ---
         function createDraggableLabel({ text, color, isPriority = false, isDeletable = true }) {
             const labelEl = document.createElement('div');
@@ -442,7 +454,7 @@
                     saveList();
                 });
             }
-            
+
             labelEl.addEventListener('dragstart', e => {
                 const data = JSON.stringify({ text, color, isPriority });
                 e.dataTransfer.setData('application/json', data);
@@ -450,7 +462,7 @@
 
             return labelEl;
         }
-        
+
         function saveLabels() {
             const labels = [];
             labelCloud.querySelectorAll('.draggable-label').forEach(labelEl => {
@@ -473,7 +485,7 @@
                  labels.forEach(l => labelCloud.appendChild(createDraggableLabel(l)));
             }
         }
-        
+
         function initializeColorPalette() {
             LABEL_COLORS.forEach((color, index) => {
                 const swatch = document.createElement('div');
@@ -491,13 +503,13 @@
                 }
             });
         }
-        
+
         function initializePriorities() {
             Object.values(PRIORITIES).forEach(p => {
                 priorityLabelsContainer.appendChild(createDraggableLabel({ text: p.name, color: p.color, isPriority: true, isDeletable: false }));
             });
         }
-        
+
         // --- EVENT HANDLERS ---
         function handleAddLabel() {
             const labelText = newLabelInput.value.trim();
@@ -510,7 +522,7 @@
                 newLabelInput.focus();
             }
         }
-        
+
         function handleListClick(e) {
             const itemEl = e.target.closest('.todo-item');
             if (!itemEl) return;
@@ -535,7 +547,7 @@
                 saveList();
             }
         }
-        
+
         function handleListKeyDown(e) {
             if (e.target.classList.contains('todo-text') && e.key === 'Enter') {
                 e.preventDefault();
@@ -584,14 +596,14 @@
         document.addEventListener('click', handleListClick);
         document.addEventListener('input', e => { if (e.target.classList.contains('todo-text')) saveList(); });
         document.addEventListener('keydown', handleListKeyDown);
-        
+
         newListBtn.addEventListener('click', handleStartNewList);
         addLabelBtn.addEventListener('click', handleAddLabel);
         newLabelInput.addEventListener('keydown', e => { if (e.key === 'Enter') handleAddLabel(); });
-        
+
         sortByLabelBtn.addEventListener('click', () => setSortMode('label'));
         sortByPriorityBtn.addEventListener('click', () => setSortMode('priority'));
-        
+
         initializeColorPalette();
         initializePriorities();
         loadLabels();
@@ -600,4 +612,3 @@
     </script>
 </body>
 </html>
-
